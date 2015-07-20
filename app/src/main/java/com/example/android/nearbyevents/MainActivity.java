@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -13,13 +12,24 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.places.Places;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.UiSettings;
+import com.google.android.gms.maps.model.LatLng;
 
 public class MainActivity extends AppCompatActivity implements
         ConnectionCallbacks, OnConnectionFailedListener {
 
     private GoogleApiClient mGoogleApiClient = null;
     private Location mLastLocation = null;
+    private GoogleMap map = null;
+
+    private double myLatitude, myLongitude;
     public boolean noLocation = false;
+
+    private final static float zoomLevel = 18;  //up to 21
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,8 +37,31 @@ public class MainActivity extends AppCompatActivity implements
         buildGoogleApiClient();
         mGoogleApiClient.connect();
         setContentView(R.layout.activity_main);
+
+        if(map == null)
+        {
+            map = ((SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.ourMap)).getMap();
+
+            if(map != null)
+            {
+                map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                map.setMyLocationEnabled(true);
+
+                UiSettings settings;
+                settings = map.getUiSettings();
+                settings.setMapToolbarEnabled(true);
+                settings.setCompassEnabled(true);
+                settings.setZoomControlsEnabled(true);
+            }
+        }
     }
 
+    private void updateLocation()
+    {
+        LatLng lastLatLng = new LatLng(myLatitude, myLongitude);
+
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(lastLatLng, zoomLevel), 2000, null);
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -65,13 +98,10 @@ public class MainActivity extends AppCompatActivity implements
             return;
         }
 
-        String latitude = "My Latitude: " + String.valueOf(mLastLocation.getLatitude());
-        String longitude = "My Longitude: " + String.valueOf(mLastLocation.getLongitude());
+        myLatitude = mLastLocation.getLatitude();
+        myLongitude = mLastLocation.getLongitude();
 
-        TextView latView = (TextView)findViewById(R.id.myLatitude);
-        TextView longView = (TextView)findViewById(R.id.myLongitude);
-        latView.setText(latitude);
-        longView.setText(longitude);
+        updateLocation();
     }
 
     @Override
@@ -94,6 +124,8 @@ public class MainActivity extends AppCompatActivity implements
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .addApi(LocationServices.API)
+                .addApi(Places.GEO_DATA_API)
+                .addApi(Places.PLACE_DETECTION_API)
                 .build();
     }
 
