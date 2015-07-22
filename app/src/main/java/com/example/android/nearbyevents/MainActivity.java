@@ -1,41 +1,27 @@
 package com.example.android.nearbyevents;
 
-import android.location.Location;
 import android.os.Bundle;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
-import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.places.Places;
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
-import com.google.android.gms.maps.model.LatLng;
 
-public class MainActivity extends AppCompatActivity implements
-        ConnectionCallbacks, OnConnectionFailedListener {
+public class MainActivity extends AppCompatActivity {
 
-    private GoogleApiClient mGoogleApiClient = null;
-    private Location mLastLocation = null;
     private GoogleMap map = null;
+    private FragmentManager fragMan;
+    private TaskFragment taskFragment;
 
-    private double myLatitude, myLongitude;
-    public boolean noLocation = false;
-
-    private final static float zoomLevel = 18;  //up to 21
+    private final String TASK_FRAGMENT_TAG = "task";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        buildGoogleApiClient();
-        mGoogleApiClient.connect();
         setContentView(R.layout.activity_main);
 
         if(map == null)
@@ -54,13 +40,22 @@ public class MainActivity extends AppCompatActivity implements
                 settings.setZoomControlsEnabled(true);
             }
         }
-    }
 
-    private void updateLocation()
-    {
-        LatLng lastLatLng = new LatLng(myLatitude, myLongitude);
+        fragMan = getSupportFragmentManager();
+        taskFragment = (TaskFragment) fragMan.findFragmentByTag(TASK_FRAGMENT_TAG);
 
-        map.animateCamera(CameraUpdateFactory.newLatLngZoom(lastLatLng, zoomLevel), 2000, null);
+        if(taskFragment == null)
+        {
+            taskFragment = new TaskFragment();
+            fragMan.beginTransaction().add(taskFragment, TASK_FRAGMENT_TAG).commit();
+            Log.v("MainActivity", "No fragment yet");
+        }
+
+        else
+        {
+            taskFragment.activityChanged();
+            Log.v("MainActivity", "Fragment Exists");
+        }
     }
 
     @Override
@@ -83,65 +78,5 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onConnected(Bundle connectionHint) {
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
-                mGoogleApiClient);
-
-        if(mLastLocation == null)
-        {
-            Toast t = Toast.makeText(this, "Can't access location!", Toast.LENGTH_SHORT);
-            t.show();
-            noLocation = true;
-            return;
-        }
-
-        myLatitude = mLastLocation.getLatitude();
-        myLongitude = mLastLocation.getLongitude();
-
-        updateLocation();
-    }
-
-    @Override
-    public void onConnectionSuspended(int cause) {
-        // The connection has been interrupted.
-        // Disable any UI components that depend on Google APIs
-        // until onConnected() is called.
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult result) {
-        // This callback is important for handling errors that
-        // may occur while attempting to connect with Google.
-        //
-        // More about this in the 'Handle Connection Failures' section.
-    }
-
-    protected synchronized void buildGoogleApiClient() {
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .addApi(Places.GEO_DATA_API)
-                .addApi(Places.PLACE_DETECTION_API)
-                .build();
-    }
-
-    public GoogleApiClient getmGoogleApiClient()
-    {
-        return mGoogleApiClient;
-    }
-
-    public Location getmLastLocation()
-    {
-        return mLastLocation;
-    }
-
-    @Override
-    protected void onStop() {
-        mGoogleApiClient.disconnect();
-        super.onStop();
     }
 }
