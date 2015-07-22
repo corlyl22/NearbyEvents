@@ -54,9 +54,11 @@ public class TaskFragment extends Fragment implements
     private ArrayList<MarkerOptions> previousPlaces2 = null;
     private double myLatitude, myLongitude;
     private boolean moreResults = false;
+    boolean needsUpdate = false;
+    boolean safeToUpdate = true;
 
     private final int MAX_PLACES = 60;
-    private final float zoomLevel = 14;  //up to 21
+    private final float zoomLevel = 16;  //up to 21
     private final float smallestDisplacement = 200;
     private final String baseURL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
     private final String placesOrder = "&rankby=distance";  //if rankby == distance, do not include radius parameter
@@ -133,14 +135,6 @@ public class TaskFragment extends Fragment implements
             }
         }
 
-        /*if(!moreResults && previousMarkers2.size()>0)
-        {
-            for(Marker m: previousMarkers2){
-                if(m != null)
-                    m.remove();
-            }
-        }*/
-
         LatLng myLatLng = new LatLng(myLatitude, myLongitude);
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(myLatLng, zoomLevel), 2000, null);
 
@@ -185,10 +179,18 @@ public class TaskFragment extends Fragment implements
             previousMarkers = placeMarkers;
             previousPlaces = places;
         }
+
+        safeToUpdate = true;
+
+        if(needsUpdate) {
+            needsUpdate = false;
+            activityChanged();
+        }
     }
 
     private void getMoreResults(Marker[] placeMarkers, MarkerOptions[] places)
     {
+        safeToUpdate = false;
         if(previousMarkers != null){
             for(int i = 0; i < previousMarkers.length; i++){
                 if(previousMarkers[i] != null)

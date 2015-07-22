@@ -53,6 +53,10 @@ public class MainActivity extends AppCompatActivity {
 
         else
         {
+            if(!taskFragment.safeToUpdate) {
+                taskFragment.needsUpdate = true;
+                return;
+            }
             taskFragment.activityChanged();
             Log.v("MainActivity", "Fragment Exists");
         }
