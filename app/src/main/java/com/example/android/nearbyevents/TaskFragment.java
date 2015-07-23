@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -42,7 +43,8 @@ import javax.net.ssl.HttpsURLConnection;
  * A placeholder fragment containing a simple view.
  */
 public class TaskFragment extends Fragment implements
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener,
+        AdapterView.OnItemSelectedListener {
 
     private GoogleApiClient mGoogleApiClient = null;
     private Location mLastLocation = null;
@@ -52,24 +54,35 @@ public class TaskFragment extends Fragment implements
     private ArrayList<Marker> previousMarkers2 = null;
     private MarkerOptions[] previousPlaces = null;
     private ArrayList<MarkerOptions> previousPlaces2 = null;
+    private float zoomLevel = 13;  //up to 21
     private double myLatitude, myLongitude;
     private boolean moreResults = false;
-    boolean needsUpdate = false;
+    private boolean needsUpdate = false;
+    boolean activityNeedsUpdate = false;
     boolean safeToUpdate = true;
+    int spinnerInitCount = 4;
 
     private final int MAX_PLACES = 60;
-    private final float zoomLevel = 16;  //up to 21
     private final float smallestDisplacement = 200;
-    private final String baseURL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
-    private final String placesOrder = "&rankby=distance";  //if rankby == distance, do not include radius parameter
-    private final String placesRadius = "&radius=9000"; //in meters
-    private final String placesTypes = "&types=food|bar|movie_theater|museum|art_gallery";
     private final String placesAPIKey = "&key=AIzaSyDTf14XqzKl-raiuAnDx34-8rgwY2c_-sw";
-
+    private final String baseURL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
+    private String placesOrder = "&rankby=prominence";  //if rankby == distance, do not need radius parameter
+    private String placesRadius = "&radius=3000"; //in meters
+    private String placesTypes = "&types=";
     private String pagetoken = "";
 
     private AsyncTask<String, Void, String> mPlacesTask = null;
     private HashMap<String, Integer> mIcons = null;
+
+    String[] filterTypes = {"food", "cafe", "bar", "movie_theater", "night_club", "bowling_alley", "amusement_park", "museum", "casino", "zoo",
+            "airport", "aquarium", "art_gallery", "atm", "bakery", "bank", "beauty_salon", "book_store", "campground", "church", "clothing_store",
+            "convenience_store", "department_store", "doctor", "electronics_store", "florist", "gas_station", "grocery_or_supermarket",
+            "gym", "health", "hindu_temple", "hospital", "library", "lodging", "meal_delivery", "meal_takeaway", "mosque",
+            "movie_rental", "park", "pharmacy", "police", "school", "shopping_mall", "spa", "stadium", "synagogue", "university"};
+
+    final String[] selection = {"food", "cafe", "bar", "movie_theater", "night_club", "bowling_alley", "amusement_park", "museum", "casino", "zoo"};
+
+    ArrayList<String> selectedFilters;
 
     public TaskFragment() {
 
@@ -82,6 +95,13 @@ public class TaskFragment extends Fragment implements
 
         previousMarkers2 = new ArrayList<Marker>();
         previousPlaces2 = new ArrayList<MarkerOptions>();
+
+        selectedFilters = new ArrayList<>();
+        for(String s: selection)
+        {
+            selectedFilters.add(s);
+        }
+
         buildGoogleApiClient();
         mGoogleApiClient.connect();
         buildIconsMap();
@@ -104,10 +124,12 @@ public class TaskFragment extends Fragment implements
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/bar-71.png", R.drawable.bar_71);
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/bowling-71.png", R.drawable.bowling_71);
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/cafe-71.png", R.drawable.cafe_71);
+        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/camping-71.png", R.drawable.camping_71);
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/casino-71.png", R.drawable.casino_71);
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/dentist-71.png", R.drawable.dentist_71);
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/doctor-71.png", R.drawable.doctor_71);
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/fitness-71.png", R.drawable.fitness_71);
+        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/gas_station-71.png", R.drawable.gas_station_71);
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/generic_business-71.png", R.drawable.generic_business_71);
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/generic_recreational-71.png", R.drawable.generic_recreational_71);
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/library-71.png", R.drawable.library_71);
@@ -126,11 +148,10 @@ public class TaskFragment extends Fragment implements
         mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/zoo-71.png", R.drawable.zoo_71);
     }
 
-    private void updateLocation(Marker[] placeMarkers, MarkerOptions[] places)
-    {
-        if(previousMarkers != null){
-            for(int i = 0; i < previousMarkers.length; i++){
-                if(previousMarkers[i] != null)
+    private void updateLocation(Marker[] placeMarkers, MarkerOptions[] places) {
+        if (previousMarkers != null) {
+            for (int i = 0; i < previousMarkers.length; i++) {
+                if (previousMarkers[i] != null)
                     previousMarkers[i].remove();
             }
         }
@@ -138,11 +159,10 @@ public class TaskFragment extends Fragment implements
         LatLng myLatLng = new LatLng(myLatitude, myLongitude);
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(myLatLng, zoomLevel), 2000, null);
 
-        if(moreResults)
-        {
-            if(places != null && placeMarkers != null){
-                for(int place = 0; place < places.length && place < placeMarkers.length; place++){
-                    if(places[place] != null) {
+        if (moreResults) {
+            if (places != null && placeMarkers != null) {
+                for (int place = 0; place < places.length && place < placeMarkers.length; place++) {
+                    if (places[place] != null) {
                         placeMarkers[place] = map.addMarker(places[place]);
                         previousMarkers2.add(placeMarkers[place]);
                         previousPlaces2.add(places[place]);
@@ -151,28 +171,23 @@ public class TaskFragment extends Fragment implements
             }
 
             previousMarkers = new Marker[previousMarkers2.size()];
-            for(int i=0; i<previousMarkers.length; i++)
-            {
+            for (int i = 0; i < previousMarkers.length; i++) {
                 previousMarkers[i] = previousMarkers2.get(i);
             }
 
             previousPlaces = new MarkerOptions[previousPlaces2.size()];
-            for(int i=0; i<previousPlaces.length; i++)
-            {
+            for (int i = 0; i < previousPlaces.length; i++) {
                 previousPlaces[i] = previousPlaces2.get(i);
             }
 
             moreResults = !moreResults;
             previousMarkers2.clear();
             previousPlaces2.clear();
-        }
-
-        else
-        {
-            if(places != null && placeMarkers != null){
-                for(int place = 0; place < places.length && place < placeMarkers.length; place++){
-                    if(places[place] != null)
-                        placeMarkers[place]= map.addMarker(places[place]);
+        } else {
+            if (places != null && placeMarkers != null) {
+                for (int place = 0; place < places.length && place < placeMarkers.length; place++) {
+                    if (places[place] != null)
+                        placeMarkers[place] = map.addMarker(places[place]);
                 }
             }
 
@@ -182,15 +197,22 @@ public class TaskFragment extends Fragment implements
 
         safeToUpdate = true;
 
-        if(needsUpdate) {
+        if(needsUpdate)
+        {
             needsUpdate = false;
+            String placesUrl = buildQueryUrl();
+            startPlacesTask(placesUrl);
+        }
+
+        if (activityNeedsUpdate) {
+            activityNeedsUpdate = false;
             activityChanged();
         }
     }
 
     private void getMoreResults(Marker[] placeMarkers, MarkerOptions[] places)
     {
-        safeToUpdate = false;
+        //safeToUpdate = false;
         if(previousMarkers != null){
             for(int i = 0; i < previousMarkers.length; i++){
                 if(previousMarkers[i] != null)
@@ -221,6 +243,22 @@ public class TaskFragment extends Fragment implements
         updateLocation(previousMarkers, previousPlaces);
     }
 
+    public void filtersUpdated(ArrayList<String> selection)
+    {
+        selectedFilters = selection;
+
+        if(!safeToUpdate) {
+            needsUpdate = true;
+            return;
+        }
+
+        else
+        {
+            String placesUrl = buildQueryUrl();
+            startPlacesTask(placesUrl);
+        }
+    }
+
     private void createLocationRequest() {
         mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(30000);
@@ -238,11 +276,13 @@ public class TaskFragment extends Fragment implements
         {
             Toast t = Toast.makeText(getActivity(), "Can't access location!", Toast.LENGTH_SHORT);
             t.show();
-            return;
         }
 
-        myLatitude = mLastLocation.getLatitude();
-        myLongitude = mLastLocation.getLongitude();
+        else
+        {
+            myLatitude = mLastLocation.getLatitude();
+            myLongitude = mLastLocation.getLongitude();
+        }
 
         createLocationRequest();
         LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
@@ -261,6 +301,14 @@ public class TaskFragment extends Fragment implements
     private synchronized String buildQueryUrl()
     {
         String location = "&location=" + String.valueOf(myLatitude) + "," + String.valueOf(myLongitude);
+        String types = "";
+        for(String s: selectedFilters)
+        {
+            types += "|" + s;
+        }
+        types = types.substring(1);
+        types = placesTypes + types;
+
         if(!pagetoken.contains("pagetoken="))
             pagetoken = "pagetoken=" + pagetoken;
 
@@ -271,7 +319,7 @@ public class TaskFragment extends Fragment implements
                     + pagetoken
                     + location
                     + placesOrder
-                    + placesTypes
+                    + types
                     + placesAPIKey;
         }
 
@@ -279,8 +327,9 @@ public class TaskFragment extends Fragment implements
             placesUrl = baseURL
                     + pagetoken
                     + location
+                    + placesOrder
                     + placesRadius
-                    + placesTypes
+                    + types
                     + placesAPIKey;
         }
 
@@ -300,6 +349,68 @@ public class TaskFragment extends Fragment implements
         // may occur while attempting to connect with Google.
         //
         // More about this in the 'Handle Connection Failures' section.
+    }
+
+    public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+        if(spinnerInitCount != 0) {
+            spinnerInitCount--;
+            return;
+        }
+
+        if(parent.getItemAtPosition(pos).equals("Distance")) {
+            placesOrder = "&rankby=distance";
+            zoomLevel = 14;
+            ((MainActivity)getActivity()).disableRadiusSpinner();
+        }
+        else if (parent.getItemAtPosition(pos).equals("Prominence")) {
+            placesOrder = "&rankby=prominence";
+            if(placesRadius.equals("&radius=10000"))
+                zoomLevel = 11;
+            else if(placesRadius.equals("&radius=5000"))
+                zoomLevel = 12;
+            else if(placesRadius.equals("&radius=3000"))
+                zoomLevel = 13;
+            else
+                zoomLevel = 14;
+
+            ((MainActivity)getActivity()).enableRadiusSpinner();
+        }
+        else if (parent.getItemAtPosition(pos).equals("10000m")) {
+            placesRadius = "&radius=10000";
+            zoomLevel = 11;
+        }
+        else if (parent.getItemAtPosition(pos).equals("5000m")) {
+            placesRadius = "&radius=5000";
+            zoomLevel = 12;
+        }
+        else if (parent.getItemAtPosition(pos).equals("3000m")) {
+            placesRadius = "&radius=3000";
+            zoomLevel = 13;
+        }
+        else if (parent.getItemAtPosition(pos).equals("1000m")) {
+            placesRadius = "&radius=1000";
+            zoomLevel = 14;
+        }
+
+        if(!safeToUpdate) {
+            needsUpdate = true;
+            return;
+        }
+
+        else
+        {
+            String placesUrl = buildQueryUrl();
+            startPlacesTask(placesUrl);
+        }
+    }
+
+    public void onItemReselected(AdapterView<?> parent, View view, int pos, long id)
+    {
+
+    }
+
+    public void onNothingSelected(AdapterView<?> parent) {
+        // Another interface callback
     }
 
     private synchronized void buildGoogleApiClient() {
@@ -373,6 +484,7 @@ public class TaskFragment extends Fragment implements
 
         @Override
         protected void onPostExecute(String result) {
+            safeToUpdate = false;
             MarkerOptions[] places = null;
             Marker[] placeMarkers = new Marker[MAX_PLACES];
             try {
