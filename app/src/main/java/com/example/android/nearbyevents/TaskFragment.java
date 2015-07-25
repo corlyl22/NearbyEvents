@@ -66,7 +66,7 @@ public class TaskFragment extends Fragment implements
     private final float smallestDisplacement = 200;
     private final String placesAPIKey = "&key=AIzaSyDTf14XqzKl-raiuAnDx34-8rgwY2c_-sw";
     private final String baseURL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
-    private String placesOrder = "&rankby=prominence";  //if rankby == distance, do not need radius parameter
+    private String placesOrder = "&rankby=prominence";  //if rankby == distance, must not use radius parameter
     private String placesRadius = "&radius=3000"; //in meters
     private String placesTypes = "&types=";
     private String pagetoken = "";
