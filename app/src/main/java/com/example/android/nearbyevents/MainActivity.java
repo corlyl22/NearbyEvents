@@ -1,115 +1,229 @@
 package com.example.android.nearbyevents;
 
-import android.location.Location;
+import android.content.res.Configuration;
 import android.os.Bundle;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.Spinner;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
-import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
-import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.UiSettings;
 
-public class MainActivity extends AppCompatActivity implements
-        ConnectionCallbacks, OnConnectionFailedListener {
+public class MainActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
-    private GoogleApiClient mGoogleApiClient = null;
-    private Location mLastLocation = null;
-    public boolean noLocation = false;
+    private GoogleMap map = null;
+    private FragmentManager fragMan;
+    private TaskFragment taskFragment;
+    private Spinner mapTypes;
+    private ArrayAdapter<String> mapSpinnerAdapter;
+    private Spinner placesRank;
+    private ArrayAdapter<String> rankSpinnerAdapter;
+    private Spinner placesRadius;
+    private ArrayAdapter<String> radiusSpinnerAdapter;
+    private MultiSelectionSpinner placesFilter;
+    private String[] mNavigationItems = {"Nearby Places", "Favorite Places", "Upcoming Events", "Settings"};
+    private DrawerLayout mDrawerLayout;
+    private ListView mDrawerList;
+    private ActionBarDrawerToggle mDrawerToggle;
+    private CharSequence mDrawerTitle;
+    private CharSequence mTitle;
+
+
+
+    int spinnerInitCount = 1;
+
+    private final String TASK_FRAGMENT_TAG = "task";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        buildGoogleApiClient();
-        mGoogleApiClient.connect();
         setContentView(R.layout.activity_main);
+
+        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        mDrawerList = (ListView) findViewById(R.id.left_drawer);
+        mDrawerList.startLayoutAnimation();
+
+        // Set the adapter for the list view
+        mDrawerList.setAdapter(new ArrayAdapter<String>(this, R.layout.drawer_list_item, mNavigationItems));
+        // Set the list's click listener
+        mDrawerList.setOnItemClickListener(new DrawerItemClickListener(this));
+
+        mTitle = mDrawerTitle = getTitle();
+        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, R.string.drawer_open, R.string.drawer_close) {
+
+            /** Called when a drawer has settled in a completely closed state. */
+            public void onDrawerClosed(View view) {
+                super.onDrawerClosed(view);
+                getSupportActionBar().setTitle(mTitle);
+            }
+
+            /** Called when a drawer has settled in a completely open state. */
+            public void onDrawerOpened(View drawerView) {
+                super.onDrawerOpened(drawerView);
+                getSupportActionBar().setTitle(mDrawerTitle);
+            }
+        };
+
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setHomeButtonEnabled(true);
+        mDrawerToggle.setDrawerIndicatorEnabled(true);
+        mDrawerToggle.syncState();
+
+        // Set the drawer toggle as the DrawerListener
+        mDrawerLayout.setDrawerListener(mDrawerToggle);
+
+        if(map == null)
+        {
+            map = ((SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.ourMap)).getMap();
+
+            if(map != null)
+            {
+                map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                map.setMyLocationEnabled(true);
+
+                UiSettings settings;
+                settings = map.getUiSettings();
+                settings.setMapToolbarEnabled(true);
+                settings.setCompassEnabled(true);
+                settings.setZoomControlsEnabled(true);
+            }
+        }
+
+        fragMan = getSupportFragmentManager();
+        taskFragment = (TaskFragment) fragMan.findFragmentByTag(TASK_FRAGMENT_TAG);
+
+        if(taskFragment == null)
+        {
+            taskFragment = new TaskFragment();
+            fragMan.beginTransaction().add(taskFragment, TASK_FRAGMENT_TAG).commit();
+            spinnerInitCount = 1;
+            taskFragment.spinnerInitCount = 4;
+
+            placesFilter = (MultiSelectionSpinner) findViewById(R.id.places_filter);
+            placesFilter.setFragment(taskFragment);
+            placesFilter.setItems(taskFragment.filterTypes);
+            placesFilter.setSelection(taskFragment.selection);
+            setUpSpinners();
+        }
+
+        else
+        {
+            spinnerInitCount = 1;
+            taskFragment.spinnerInitCount = 4;
+
+            placesFilter = (MultiSelectionSpinner) findViewById(R.id.places_filter);
+            placesFilter.setFragment(taskFragment);
+            placesFilter.setItems(taskFragment.filterTypes);
+            placesFilter.setSelection(taskFragment.selectedFilters);
+            setUpSpinners();
+
+            if(!taskFragment.safeToUpdate) {
+                taskFragment.activityNeedsUpdate = true;
+                return;
+            }
+            taskFragment.activityChanged();
+        }
+    }
+
+    private void setUpSpinners()
+    {
+        mapTypes = (Spinner) findViewById(R.id.map_spinner);
+        mapSpinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item);
+        mapSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mapSpinnerAdapter.add("Normal");
+        mapSpinnerAdapter.add("Satellite");
+        mapTypes.setAdapter(mapSpinnerAdapter);
+        mapTypes.setOnItemSelectedListener(this);
+
+        placesRank = (Spinner) findViewById(R.id.places_rank);
+        rankSpinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item);
+        rankSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        rankSpinnerAdapter.add("Distance");
+        rankSpinnerAdapter.add("Prominence");
+        placesRank.setAdapter(rankSpinnerAdapter);
+        placesRank.setSelection(rankSpinnerAdapter.getPosition("Prominence"));
+        placesRank.setOnItemSelectedListener(taskFragment);
+
+        placesRadius = (Spinner) findViewById(R.id.places_radius);
+        radiusSpinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item);
+        radiusSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        radiusSpinnerAdapter.add("10000m");
+        radiusSpinnerAdapter.add("5000m");
+        radiusSpinnerAdapter.add("3000m");
+        radiusSpinnerAdapter.add("1000m");
+        placesRadius.setAdapter(radiusSpinnerAdapter);
+        placesRadius.setSelection(radiusSpinnerAdapter.getPosition("3000m"));
+        placesRadius.setOnItemSelectedListener(taskFragment);
+    }
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        // Sync the toggle state after onRestoreInstanceState has occurred.
+        mDrawerToggle.syncState();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        mDrawerToggle.onConfigurationChanged(newConfig);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Pass the event to ActionBarDrawerToggle, if it returns
+        // true, then it has handled the app icon touch event
+        if (mDrawerToggle.onOptionsItemSelected(item)) {
+            return true;
+        }
+        // Handle your other action bar items...
+
+        return super.onOptionsItemSelected(item);
     }
 
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
+        //getMenuInflater().inflate(R.menu.menu_main, menu);
+        return false;
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onConnected(Bundle connectionHint) {
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
-                mGoogleApiClient);
-
-        if(mLastLocation == null)
-        {
-            Toast t = Toast.makeText(this, "Can't access location!", Toast.LENGTH_SHORT);
-            t.show();
-            noLocation = true;
+    public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+        if(spinnerInitCount != 0) {
+            spinnerInitCount--;
             return;
         }
 
-        String latitude = "My Latitude: " + String.valueOf(mLastLocation.getLatitude());
-        String longitude = "My Longitude: " + String.valueOf(mLastLocation.getLongitude());
-
-        TextView latView = (TextView)findViewById(R.id.myLatitude);
-        TextView longView = (TextView)findViewById(R.id.myLongitude);
-        latView.setText(latitude);
-        longView.setText(longitude);
+        if(parent.getItemAtPosition(pos).equals("Satellite"))
+            map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+        else
+            map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
     }
 
-    @Override
-    public void onConnectionSuspended(int cause) {
-        // The connection has been interrupted.
-        // Disable any UI components that depend on Google APIs
-        // until onConnected() is called.
+    public void onNothingSelected(AdapterView<?> parent) {
+        // Another interface callback
     }
 
-    @Override
-    public void onConnectionFailed(ConnectionResult result) {
-        // This callback is important for handling errors that
-        // may occur while attempting to connect with Google.
-        //
-        // More about this in the 'Handle Connection Failures' section.
-    }
-
-    protected synchronized void buildGoogleApiClient() {
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
-    }
-
-    public GoogleApiClient getmGoogleApiClient()
+    public void disableRadiusSpinner()
     {
-        return mGoogleApiClient;
+        placesRadius.setEnabled(false);
+        placesRadius.getSelectedView().setEnabled(false);
     }
 
-    public Location getmLastLocation()
+    public void enableRadiusSpinner()
     {
-        return mLastLocation;
+        placesRadius.setEnabled(true);
+        placesRadius.getSelectedView().setEnabled(true);
     }
 
-    @Override
-    protected void onStop() {
-        mGoogleApiClient.disconnect();
-        super.onStop();
-    }
 }
