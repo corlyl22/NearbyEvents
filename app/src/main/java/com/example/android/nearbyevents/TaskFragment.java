@@ -1,15 +1,20 @@
 package com.example.android.nearbyevents;
 
+import android.content.Context;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.v4.app.Fragment;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -137,8 +142,8 @@ public class TaskFragment extends Fragment implements
         mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/lodging-71.png", R.drawable.lodging_71);
         mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/movies-71.png", R.drawable.movies_71);
         mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/museum-71.png", R.drawable.museum_71);
-        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/police-71.png", R.drawable.police_72);
-        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/restaurant-71.png", R.drawable.restaurant_72);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/police-71.png", R.drawable.police_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/restaurant-71.png", R.drawable.restaurant_71);
         mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/shopping-71.png", R.drawable.shopping_71);
         mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/stadium-71.png", R.drawable.stadium_71);
         mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/wine-71.png", R.drawable.wine_71);
@@ -303,7 +308,7 @@ public class TaskFragment extends Fragment implements
     {
         String placeId = m.getTitle();
         new PlacesDetailTask().execute(placeBaseURL + placeId + placesAPIKey);
-        return false;
+        return true;
     }
 
     private synchronized String buildQueryUrl()
@@ -577,7 +582,7 @@ public class TaskFragment extends Fragment implements
             StringBuilder placesBuilder = new StringBuilder();
 
             for (String placeUrl : placesURL) {
-                Log.v("MarkerClickerListener", placeUrl);
+                Log.v("PlacesDetailTask", placeUrl);
                 try
                 {
                     URL url = new URL(placeUrl);
@@ -633,9 +638,23 @@ public class TaskFragment extends Fragment implements
                     placeName = place.getString("name");
                     vicinity = place.getString("vicinity");
                 } catch (JSONException jse) {
-                    Log.v("MrkerCLickListener", "missing value");
+                    Log.v("PlacesDetailTask", "missing value");
                     jse.printStackTrace();
                 }
+
+                LayoutInflater inflater = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                View markerPopupRoot = inflater.inflate(R.layout.marker_popup, null);
+                TextView markerName = (TextView)markerPopupRoot.findViewById(R.id.marker_name);
+                TextView markerAddr = (TextView)markerPopupRoot.findViewById(R.id.marker_address);
+                markerName.setText(placeName);
+                markerAddr.setText(vicinity);
+                PopupWindow markerDetails = new PopupWindow(getActivity());
+                markerDetails.setContentView(markerPopupRoot);
+                markerDetails.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
+                markerDetails.setWidth(LinearLayout.LayoutParams.WRAP_CONTENT);
+                markerDetails.setFocusable(true);
+                markerDetails.setTouchable(true);
+                markerDetails.showAtLocation(markerPopupRoot, Gravity.CENTER, 0, 0);
 
             } catch (Exception e) {
                 e.printStackTrace();
