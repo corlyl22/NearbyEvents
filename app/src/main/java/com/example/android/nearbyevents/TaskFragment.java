@@ -44,7 +44,7 @@ import javax.net.ssl.HttpsURLConnection;
  */
 public class TaskFragment extends Fragment implements
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener,
-        AdapterView.OnItemSelectedListener {
+        AdapterView.OnItemSelectedListener, GoogleMap.OnMarkerClickListener {
 
     private GoogleApiClient mGoogleApiClient = null;
     private Location mLastLocation = null;
@@ -66,6 +66,7 @@ public class TaskFragment extends Fragment implements
     private final float smallestDisplacement = 200;
     private final String placesAPIKey = "&key=AIzaSyDTf14XqzKl-raiuAnDx34-8rgwY2c_-sw";
     private final String baseURL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
+    private final String placeBaseURL = "https://maps.googleapis.com/maps/api/place/details/json?placeid=";
     private String placesOrder = "&rankby=prominence";  //if rankby == distance, must not use radius parameter
     private String placesRadius = "&radius=3000"; //in meters
     private String placesTypes = "&types=";
@@ -118,34 +119,34 @@ public class TaskFragment extends Fragment implements
     {
         mIcons = new HashMap<String, Integer>();
 
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/airport-71.png", R.drawable.airport_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/aquarium-71.png", R.drawable.aquarium_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/art_gallery-71.png", R.drawable.art_gallery_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/bar-71.png", R.drawable.bar_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/bowling-71.png", R.drawable.bowling_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/cafe-71.png", R.drawable.cafe_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/camping-71.png", R.drawable.camping_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/casino-71.png", R.drawable.casino_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/dentist-71.png", R.drawable.dentist_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/doctor-71.png", R.drawable.doctor_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/fitness-71.png", R.drawable.fitness_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/gas_station-71.png", R.drawable.gas_station_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/generic_business-71.png", R.drawable.generic_business_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/generic_recreational-71.png", R.drawable.generic_recreational_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/library-71.png", R.drawable.library_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/lodging-71.png", R.drawable.lodging_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/movies-71.png", R.drawable.movies_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/museum-71.png", R.drawable.museum_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/police-71.png", R.drawable.police_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/restaurant-71.png", R.drawable.restaurant_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/shopping-71.png", R.drawable.shopping_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/stadium-71.png", R.drawable.stadium_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/wine-71.png", R.drawable.wine_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/worship_general-71.png", R.drawable.worship_general_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/worship_hindu-71.png", R.drawable.worship_hindu_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/worship_islam-71.png", R.drawable.worship_islam_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/worship_jewish-71.png", R.drawable.worship_jewish_71);
-        mIcons.put("http://maps.gstatic.com/mapfiles/place_api/icons/zoo-71.png", R.drawable.zoo_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/airport-71.png", R.drawable.airport_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/aquarium-71.png", R.drawable.aquarium_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/art_gallery-71.png", R.drawable.art_gallery_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/bar-71.png", R.drawable.bar_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/bowling-71.png", R.drawable.bowling_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/cafe-71.png", R.drawable.cafe_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/camping-71.png", R.drawable.camping_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/casino-71.png", R.drawable.casino_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/dentist-71.png", R.drawable.dentist_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/doctor-71.png", R.drawable.doctor_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/fitness-71.png", R.drawable.fitness_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/gas_station-71.png", R.drawable.gas_station_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/generic_business-71.png", R.drawable.generic_business_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/generic_recreational-71.png", R.drawable.generic_recreational_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/library-71.png", R.drawable.library_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/lodging-71.png", R.drawable.lodging_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/movies-71.png", R.drawable.movies_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/museum-71.png", R.drawable.museum_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/police-71.png", R.drawable.police_72);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/restaurant-71.png", R.drawable.restaurant_72);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/shopping-71.png", R.drawable.shopping_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/stadium-71.png", R.drawable.stadium_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/wine-71.png", R.drawable.wine_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/worship_general-71.png", R.drawable.worship_general_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/worship_hindu-71.png", R.drawable.worship_hindu_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/worship_islam-71.png", R.drawable.worship_islam_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/worship_jewish-71.png", R.drawable.worship_jewish_71);
+        mIcons.put("https://maps.gstatic.com/mapfiles/place_api/icons/zoo-71.png", R.drawable.zoo_71);
     }
 
     private void updateLocation(Marker[] placeMarkers, MarkerOptions[] places) {
@@ -298,6 +299,13 @@ public class TaskFragment extends Fragment implements
         startPlacesTask(placesUrl);
     }
 
+    public boolean onMarkerClick(Marker m)
+    {
+        String placeId = m.getTitle();
+        new PlacesDetailTask().execute(placeBaseURL + placeId + placesAPIKey);
+        return false;
+    }
+
     private synchronized String buildQueryUrl()
     {
         String location = "&location=" + String.valueOf(myLatitude) + "," + String.valueOf(myLongitude);
@@ -306,7 +314,9 @@ public class TaskFragment extends Fragment implements
         {
             types += "|" + s;
         }
-        types = types.substring(1);
+        if(!types.equals("")) {
+            types = types.substring(1);
+        }
         types = placesTypes + types;
 
         if(!pagetoken.contains("pagetoken="))
@@ -508,6 +518,7 @@ public class TaskFragment extends Fragment implements
                     LatLng placeCoordinates = null;
                     String placeName = "";
                     String vicinity = "";
+                    String placeId = "";
                     int icon = R.drawable.generic_business_71;
 
                     try{
@@ -518,9 +529,15 @@ public class TaskFragment extends Fragment implements
                         placeCoordinates = new LatLng(Double.valueOf(loc.getString("lat")), Double.valueOf(loc.getString("lng")));
                         vicinity = placeObject.getString("vicinity");
                         placeName = placeObject.getString("name");
+                        placeId = placeObject.getString("place_id");
 
-                        if(mIcons.get(placeObject.getString("icon")) != null)
+                        if(mIcons.get(placeObject.getString("icon")) != null) {
                             icon = mIcons.get(placeObject.getString("icon"));
+                        }
+
+                        else
+                            Log.v("Woooo", placeObject.getString("icon"));
+
                     }
 
                     catch(JSONException jse){
@@ -535,7 +552,7 @@ public class TaskFragment extends Fragment implements
                     else {
                         places[place] = new MarkerOptions()
                                 .position(placeCoordinates)
-                                .title(placeName)
+                                .title(placeId)
                                 .snippet(vicinity)
                                 .icon(BitmapDescriptorFactory.fromResource(icon));
                     }
@@ -548,6 +565,79 @@ public class TaskFragment extends Fragment implements
             }
 
             catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public class PlacesDetailTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... placesURL) {
+            StringBuilder placesBuilder = new StringBuilder();
+
+            for (String placeUrl : placesURL) {
+                Log.v("MarkerClickerListener", placeUrl);
+                try
+                {
+                    URL url = new URL(placeUrl);
+                    HttpsURLConnection urlConnection = (HttpsURLConnection) url.openConnection();
+                    urlConnection.setRequestMethod("GET");
+                    urlConnection.connect();
+
+                    if(urlConnection.getResponseCode() == 200)
+                    {
+                        InputStream placesContent = urlConnection.getInputStream();
+                        InputStreamReader placesInput = new InputStreamReader(placesContent);
+                        BufferedReader placesReader = new BufferedReader(placesInput);
+                        String line;
+
+                        while ((line = placesReader.readLine()) != null) {
+                            if(isCancelled())
+                            {
+                                return null;
+                            }
+                            placesBuilder.append(line);
+                        }
+                    }
+
+                    //further implement error handling
+                    else
+                    {
+                        Log.v("TaskFragment", "could not connect");
+                    }
+                }
+
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
+            }
+
+            return placesBuilder.toString();
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            try {
+                //parse JSON
+
+                JSONObject resultObject = new JSONObject(result);
+
+                JSONObject place = resultObject.getJSONObject("result");
+
+                String placeName = "";
+                String vicinity = "";
+
+                try {
+                    placeName = place.getString("name");
+                    vicinity = place.getString("vicinity");
+                } catch (JSONException jse) {
+                    Log.v("MrkerCLickListener", "missing value");
+                    jse.printStackTrace();
+                }
+
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
