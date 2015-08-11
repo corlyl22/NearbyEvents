@@ -84,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         if(map == null)
         {
             map = ((SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.ourMap)).getMap();
+            //map.setOnMarkerClickListener(new MarkerClickListener());
 
             if(map != null)
             {
