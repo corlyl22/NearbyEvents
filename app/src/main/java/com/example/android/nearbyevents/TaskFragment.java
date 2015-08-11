@@ -1,10 +1,12 @@
 package com.example.android.nearbyevents;
 
 import android.content.Context;
+import android.content.Intent;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.provider.CalendarContract;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.Gravity;
@@ -12,6 +14,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
@@ -521,7 +524,7 @@ public class TaskFragment extends Fragment implements
                 for (int place = 0; place < placesArray.length(); place++) {
                     boolean incomplete = false; //is place info incomplete?
                     LatLng placeCoordinates = null;
-                    String placeName = "";
+                    String placeName;
                     String vicinity = "";
                     String placeId = "";
                     int icon = R.drawable.generic_business_71;
@@ -631,11 +634,11 @@ public class TaskFragment extends Fragment implements
 
                 JSONObject place = resultObject.getJSONObject("result");
 
-                String placeName = "";
+                final StringBuffer placeName = new StringBuffer();
                 String vicinity = "";
 
                 try {
-                    placeName = place.getString("name");
+                    placeName.append(place.getString("name"));
                     vicinity = place.getString("vicinity");
                 } catch (JSONException jse) {
                     Log.v("PlacesDetailTask", "missing value");
@@ -644,6 +647,18 @@ public class TaskFragment extends Fragment implements
 
                 LayoutInflater inflater = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
                 View markerPopupRoot = inflater.inflate(R.layout.marker_popup, null);
+                Button calendarButton = (Button) markerPopupRoot.findViewById(R.id.markerAddCalendar);
+
+                calendarButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String name = placeName.toString();
+                        Intent calendarIntent = new Intent(Intent.ACTION_INSERT)
+                                .setData(CalendarContract.Events.CONTENT_URI)
+                                .putExtra(CalendarContract.Events.TITLE, name);
+                        startActivity(calendarIntent);
+                    }
+                });
                 TextView markerName = (TextView)markerPopupRoot.findViewById(R.id.marker_name);
                 TextView markerAddr = (TextView)markerPopupRoot.findViewById(R.id.marker_address);
                 markerName.setText(placeName);
@@ -661,7 +676,6 @@ public class TaskFragment extends Fragment implements
             }
         }
     }
-
     @Override
     public void onDestroy()
     {
