@@ -84,7 +84,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         if(map == null)
         {
             map = ((SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.ourMap)).getMap();
-            //map.setOnMarkerClickListener(new MarkerClickListener());
 
             if(map != null)
             {
@@ -108,6 +107,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             fragMan.beginTransaction().add(taskFragment, TASK_FRAGMENT_TAG).commit();
             spinnerInitCount = 1;
             taskFragment.spinnerInitCount = 4;
+            map.setOnMarkerClickListener(taskFragment);
 
             placesFilter = (MultiSelectionSpinner) findViewById(R.id.places_filter);
             placesFilter.setFragment(taskFragment);
@@ -120,6 +120,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         {
             spinnerInitCount = 1;
             taskFragment.spinnerInitCount = 4;
+            map.setOnMarkerClickListener(taskFragment);
 
             placesFilter = (MultiSelectionSpinner) findViewById(R.id.places_filter);
             placesFilter.setFragment(taskFragment);
