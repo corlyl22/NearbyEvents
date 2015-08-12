@@ -2,6 +2,7 @@ package com.example.android.nearbyevents;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Paint;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -682,6 +683,7 @@ public class TaskFragment extends Fragment implements
                 });
                 markerName.setText(placeName);
                 markerAddr.setText(vicinity);
+                markerAddr.setPaintFlags(markerAddr.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
                 PopupWindow markerDetails = new PopupWindow(getActivity());
                 markerDetails.setContentView(markerPopupRoot);
                 markerDetails.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
