@@ -3,6 +3,7 @@ package com.example.android.nearbyevents;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -72,7 +73,7 @@ public class TaskFragment extends Fragment implements
 
     private final int MAX_PLACES = 60;
     private final float smallestDisplacement = 200;
-    private final String placesAPIKey = "&key=AIzaSyDTf14XqzKl-raiuAnDx34-8rgwY2c_-sw";
+    private final String placesAPIKey = "&key=AIzaSyB_MV91xya6O90GHceqTNm94gkSNv6iWJ4";
     private final String baseURL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
     private final String placeBaseURL = "https://maps.googleapis.com/maps/api/place/details/json?placeid=";
     private String placesOrder = "&rankby=prominence";  //if rankby == distance, must not use radius parameter
@@ -635,24 +636,31 @@ public class TaskFragment extends Fragment implements
                 JSONObject place = resultObject.getJSONObject("result");
 
                 final StringBuffer placeName = new StringBuffer();
-                String vicinity = "";
+                final StringBuffer vicinity =  new StringBuffer();
+                final StringBuffer cityV = new StringBuffer();
+                final StringBuffer countryV =  new StringBuffer();
 
                 try {
                     placeName.append(place.getString("name"));
-                    vicinity = place.getString("vicinity");
+                    vicinity.append(place.getString("formatted_address"));
+                    JSONArray address = place.getJSONArray("address_components");
+                    cityV.append(address.getJSONObject(2).getString("long_name"));
+                    countryV.append(address.getJSONObject(3).getString("long_name"));
                 } catch (JSONException jse) {
                     Log.v("PlacesDetailTask", "missing value");
-                    jse.printStackTrace();
                 }
 
                 LayoutInflater inflater = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
                 View markerPopupRoot = inflater.inflate(R.layout.marker_popup, null);
                 Button calendarButton = (Button) markerPopupRoot.findViewById(R.id.markerAddCalendar);
 
+                final String name = placeName.toString();
+                final String city = cityV.toString();
+                final String country = countryV.toString();
+
                 calendarButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        String name = placeName.toString();
                         Intent calendarIntent = new Intent(Intent.ACTION_INSERT)
                                 .setData(CalendarContract.Events.CONTENT_URI)
                                 .putExtra(CalendarContract.Events.TITLE, name);
@@ -661,6 +669,17 @@ public class TaskFragment extends Fragment implements
                 });
                 TextView markerName = (TextView)markerPopupRoot.findViewById(R.id.marker_name);
                 TextView markerAddr = (TextView)markerPopupRoot.findViewById(R.id.marker_address);
+                markerAddr.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String endpoint = "google.navigation:q=" + name + ",+" + city + "+" + country;
+                        Log.d("ENDPOINT 513", endpoint);
+                        Uri uri = Uri.parse(endpoint);
+                        Intent mapIntent = new Intent(Intent.ACTION_VIEW, uri);
+                        mapIntent.setPackage("com.google.android.apps.maps");
+                        startActivity(mapIntent);
+                    }
+                });
                 markerName.setText(placeName);
                 markerAddr.setText(vicinity);
                 PopupWindow markerDetails = new PopupWindow(getActivity());
