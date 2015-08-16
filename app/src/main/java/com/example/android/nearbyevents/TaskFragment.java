@@ -656,6 +656,7 @@ public class TaskFragment extends Fragment implements
                 Button calendarButton = (Button) markerPopupRoot.findViewById(R.id.markerAddCalendar);
 
                 final String name = placeName.toString();
+                final String addr = vicinity.toString();
                 final String city = cityV.toString();
                 final String country = countryV.toString();
 
@@ -664,7 +665,8 @@ public class TaskFragment extends Fragment implements
                     public void onClick(View v) {
                         Intent calendarIntent = new Intent(Intent.ACTION_INSERT)
                                 .setData(CalendarContract.Events.CONTENT_URI)
-                                .putExtra(CalendarContract.Events.TITLE, name);
+                                .putExtra(CalendarContract.Events.TITLE, name)
+                                .putExtra(CalendarContract.Events.EVENT_LOCATION, addr);
                         startActivity(calendarIntent);
                     }
                 });
